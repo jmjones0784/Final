@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+  <title>DC Metro Stops</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.5/esri/css/main.css">
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+    
+    #optionsDiv {
+      background-color: white;
+      color: black;
+      padding: 0px 15px 15px 15px;
+      border-bottom-left-radius: 2px;
+      border-top-right-radius: 2px;
+      border-top-left-radius: 2px;
+      border-bottom-right-radius: 2px;
+      max-width: 350px;
+      font-family: "Avenir Next W00", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-style: normal; 
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 1px 1px 0px #bdbdbd;
+    }
+  </style>
+
+  <script src="https://js.arcgis.com/4.5/"></script>
+  <script>
+    require([
+        "esri/views/MapView",
+        "esri/widgets/Legend",
+        "esri/widgets/Search",
+        "esri/widgets/Print",
+        "esri/WebMap",
+        "esri/tasks/QueryTask",
+        "esri/tasks/support/Query",
+        "esri/layers/GraphicsLayer",
+        "esri/Graphic",
+        "dojo/_base/array",
+        "dojo/dom",
+        "dojo/on",
+
+        "dojo/domReady!"
+      ],
+      function(
+        MapView, Legend, Search, Print, WebMap, QueryTask, Query, GraphicsLayer, Graphic, arrayUtils, dom, on
+      ) {
+
+        var webmap = new WebMap({
+          portalItem: { // autocasts as new PortalItem()
+            id: "79dc920969a748738737149e17e6bdfa"
+          }
+        });
+
+        var view = new MapView({
+          container: "viewDiv",
+          map: webmap
+        });
+
+        view.then(function() {
+          var featureLayer = webmap.layers.getItemAt(1);
+
+          var legend = new Legend({
+            view: view,
+            layerInfos: [{
+              layer: featureLayer,
+              title: "Metro Stops"
+            }]
+          });
+
+          view.ui.add(legend, "bottom-right");
+          
+         var searchWidget = new Search({
+           view: view
+          });
+
+         view.ui.add(searchWidget, {
+           position: "top-left",
+           index: 0
+         });
+         
+          var print = new Print({
+            view: view,
+            printServiceUrl: "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+          });
+          
+          view.ui.add(print, "top-right");
+        });
+        
+      var metroStationsUrl = "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_WebMercator/MapServer/50"; 
+      var metroLinesUrl = "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_WebMercator/MapServer/58";
+	  
+      var popupTemplate = { 
+        title: "{NAME}",
+        fieldInfos: [{
+          fieldName: "NAME",
+          label: "Station Name",          
+        }, {
+          fieldName: "ADDRESS",
+          label: "Address",
+        }, {
+          fieldName: "LINE",
+          label: "Line(s)",
+        }], 
+        content: "<b>Station Name:</b> {NAME}" +
+          "<br><b>Address:</b> {ADDRESS}" +
+          "<br><b>Line(s):</b> {LINE}"
+      };
+   
+      var queryTaskStation = new QueryTask({
+	    url: metroStationsUrl
+	  });
+      
+      var queryTaskLines = new QueryTask({
+  	    url: metroLinesUrl
+  	  });
+	  
+	  var params = new Query({
+	        returnGeometry: true,
+	        outFields: ["*"]
+	      });
+	    
+      view.then(function() {
+        view.ui.add("optionsDiv", "bottom-right");
+        on(dom.byId("doBtn"), "click", doQuery);
+      });
+	  
+      var lineSelect = dom.byId("lineSelect");
+      
+      var resultsLyr = new GraphicsLayer();
+      webmap.add(resultsLyr);
+      
+      function doQuery() {
+        resultsLyr.removeAll();        
+        
+        params.where = "LINE LIKE '%" + lineSelect.value + "%'";
+
+        queryTaskStation.execute(params)
+          .then(getResults)
+          .otherwise(promiseRejected);
+        
+      }
+
+      function getResults(response) {
+
+        var metroResults = arrayUtils.map(response.features, function(
+          feature) {
+
+          feature.symbol = {
+      		  type: "simple-marker", 
+      	      color: "yellow",
+      	      size: 12,     	      
+          };
+          
+          feature.popupTemplate = popupTemplate;
+          
+          return feature;
+        });
+        
+        resultsLyr.addMany(metroResults);
+
+        view.goTo(metroResults).then(function() {
+          view.popup.open({
+            features: metroResults,
+            featureMenuOpen: true,
+            updateLocationEnabled: true
+          });
+        });
+      }
+        
+      function promiseRejected(err) {
+        console.error("Promise rejected: ", err.message);
+      }
+      });
+  </script>
+</head>
+
+<body class="calcite">
+  <div id="viewDiv"></div>
+    <div id="optionsDiv">
+    <p> Query Metro Stops by Line </p>
+    <select id="lineSelect">
+      <option value="blue" selected>Blue</option>
+      <option value="green" selected>Green</option>
+      <option value="orange">Orange</option>
+      <option value="red">Red</option>
+      <option value="silver" selected>Silver</option>
+      <option value="yellow" selected>Yellow</option>
+    </select>
+    <button id="doBtn">Go</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="true" key="wrap"/>
+		<item value="false" key="isRegEx"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="wholeword"/>
+		<item value="metroBuffer" key="selection"/>
+		<list key="findhistory">
+			<item value="metroBuffer"/>
+			<item value="museum"/>
+			<item value="wellsLayer"/>
+			<item value="metroLayer"/>
+			<item value="metroTypeSelect"/>
+		</list>
+	</section>
+</section>
